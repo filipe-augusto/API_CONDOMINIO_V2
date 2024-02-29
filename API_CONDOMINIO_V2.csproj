@@ -14,7 +14,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="microsoft.entityframeworkcore.sqlserver" Version="8.0.2" />
     <PackageReference Include="SecureIdentity" Version="1.0.4" />
+    <PackageReference Include="swashbuckle.aspnetCore" Version="6.5.0" />
   </ItemGroup>
 
 </Project>

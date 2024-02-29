@@ -32,6 +32,7 @@ namespace API_CONDOMINIO_2.Controllers;
             return StatusCode(500, new ResultViewModel<List<Resident>>("05X04 - Falha interna no servidor"));
         }
     }
+
     private List<Resident> GetResidents(DataContext context) => context.Residents.ToList();
 
     [Authorize(Roles = "admin")]
