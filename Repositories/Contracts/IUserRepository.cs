@@ -2,11 +2,11 @@
 
 namespace API_CONDOMINIO_V2.Repositories.Contracts;
 
-    public interface IBlockRepository
+    public interface IUserRepository
     {
-        Task<List<Block>> GetAllBlocksAsync();
-        Task<Block> GetBlockByIdAsync(int id);
-        Task AddBlockAsync(Block block);
-        Task UpdateBlockAsync(Block block);
+        Task<List<User>> GetAllUsersAsync();
+        Task<User> GetUserByIdAsync(int id);
+        Task AddUserAsync(User User);
+        Task UpdateUserAsync(User User);
     }
 

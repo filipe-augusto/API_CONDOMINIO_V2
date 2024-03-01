@@ -1,6 +1,8 @@
 using API_CONDOMINIO_2;
 using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Services;
+using API_CONDOMINIO_V2.Repositories.Contracts;
+using API_CONDOMINIO_V2.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +11,7 @@ using Microsoft.OpenApi.Models;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Serialization;
+using API_CONDOMINIO_V2.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,7 +96,7 @@ void ConfigureMvc(WebApplicationBuilder builder)
 void ConfigureService(WebApplicationBuilder builder)
 {
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-
+    //builder.Services.AddSqlConnection(connectionString);
     builder.Services.AddDbContext<DataContext>(options =>
     {
         options.UseSqlServer(connectionString);
@@ -131,6 +134,6 @@ void ConfigureService(WebApplicationBuilder builder)
                 });
     });
 
-
+    builder.Services.AddRepositories();
 }
 

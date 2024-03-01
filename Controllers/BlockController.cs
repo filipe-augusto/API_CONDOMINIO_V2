@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using API_CONDOMINIO_V2.Repositories.Contracts;
 namespace API_CONDOMINIO_2.Controllers;
 
     [ApiController]
@@ -16,11 +17,14 @@ public class BlockController : Controller
 
     private readonly DataContext _context;
     private readonly IMemoryCache _cache;
+    private readonly IBlockRepository _blockRepository;
 
-    public BlockController(DataContext context, IMemoryCache cache)
+
+    public BlockController(DataContext context, IMemoryCache cache, IBlockRepository blockRepository)
     {
         _context = context;
         _cache = cache;
+        _blockRepository = blockRepository;
     }
     [HttpGet("v1/blocks")]
     public async Task<IActionResult> GetAsyncCache()
@@ -46,13 +50,13 @@ public class BlockController : Controller
 
     [Authorize(Roles = "admin")]
         [HttpGet("v2/blocks/")]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> GetAllBlocks()
         {
 
             try
             {
-                var blocks = await _context.Blocks.ToListAsync();
-                return Ok(blocks);
+                var blocks =  await _blockRepository.GetAllBlocksAsync();
+            return Ok(blocks);
             }
             catch
             {
@@ -68,14 +72,13 @@ public class BlockController : Controller
     {
         try
         {
-            var block = await _context.Blocks.FirstOrDefaultAsync(y => y.Id == id);
+            var block = await _blockRepository.GetBlockByIdAsync(id);
             if (block == null)
                 NotFound("Conteúdo não encontrado");
             return Ok(block);
         }
         catch 
         {
-
             return StatusCode(500, "05x04 - Falha interna no servidor");
         }
     }
@@ -98,9 +101,9 @@ public class BlockController : Controller
                 QuantityeUnit = model.QuantityeUnit,
                 QuantityFloor = model.QuantityFloor,
             };
-            await _context.Blocks.AddAsync(block);
-            await _context.SaveChangesAsync();
 
+
+            await _blockRepository.AddBlockAsync(block);
 
             return Ok(new ResultViewModel<dynamic>(new
             {
@@ -125,20 +128,20 @@ public class BlockController : Controller
     public async Task<IActionResult> Put(
         [FromBody] BlockViewModel model, [FromRoute] int id)
     {
-        try {
+        try
+        {
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-            var block = await _context.Blocks.FirstOrDefaultAsync(x => x.Id == id);
-            if (block == null)
-                return BadRequest(new ResultViewModel<Unit>(ModelState.GetErrors()));
+            var existingBlock = await _blockRepository.GetBlockByIdAsync(id);
+            if (existingBlock == null)
+                return NotFound(new ResultViewModel<string>("Block não encontrado"));
 
-            block.NameBlock = model.NameBlock;
-            block.QuantityFloor = model.QuantityFloor;
-            block.QuantityeUnit = model.QuantityeUnit;
+            existingBlock.NameBlock = model.NameBlock;
+            existingBlock.QuantityFloor = model.QuantityFloor;
+            existingBlock.QuantityeUnit = model.QuantityeUnit;
 
-            _context.Blocks.Update(block);
-            await _context.SaveChangesAsync();
+            await _blockRepository.UpdateBlockAsync(existingBlock);
 
             return Ok(new ResultViewModel<dynamic>(new
             {
@@ -146,7 +149,6 @@ public class BlockController : Controller
                 QuantidadeUnidades = model.QuantityeUnit,
                 QuantidadeAndares = model.QuantityFloor,
             }));
-
         }
         catch (DbUpdateException)
         {
