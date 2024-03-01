@@ -13,17 +13,24 @@ namespace API_CONDOMINIO_2.Controllers;
 [Authorize]
 public class BlockController : Controller
     {
+
+    private readonly DataContext _context;
+    private readonly IMemoryCache _cache;
+
+    public BlockController(DataContext context, IMemoryCache cache)
+    {
+        _context = context;
+        _cache = cache;
+    }
     [HttpGet("v1/blocks")]
-    public async Task<IActionResult> GetAsyncCache(
-  [FromServices] IMemoryCache cache,
-  [FromServices] DataContext context)
+    public async Task<IActionResult> GetAsyncCache()
     {
         try
         {
-            var blocks = cache.GetOrCreate("BlockCache", entry =>
+            var blocks = _cache.GetOrCreate("BlockCache", entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-                return GetBocks(context);
+                return GetBocks(_context);
             });
             return Ok(new ResultViewModel<List<Block>>(blocks));
         }
@@ -39,12 +46,12 @@ public class BlockController : Controller
 
     [Authorize(Roles = "admin")]
         [HttpGet("v2/blocks/")]
-        public async Task<IActionResult> Get([FromServices] DataContext context)
+        public async Task<IActionResult> Get()
         {
 
             try
             {
-                var blocks = await context.Blocks.ToListAsync();
+                var blocks = await _context.Blocks.ToListAsync();
                 return Ok(blocks);
             }
             catch
@@ -57,12 +64,11 @@ public class BlockController : Controller
     [Authorize(Roles = "admin")]
     [HttpGet("v1/blocks/{id:int}")]
     public async Task<IActionResult> GetId(
-        [FromServices] DataContext context,
         [FromRoute] int id)
     {
         try
         {
-            var block = await context.Blocks.FirstOrDefaultAsync(y => y.Id == id);
+            var block = await _context.Blocks.FirstOrDefaultAsync(y => y.Id == id);
             if (block == null)
                 NotFound("Conteúdo não encontrado");
             return Ok(block);
@@ -78,8 +84,7 @@ public class BlockController : Controller
 
     [Authorize(Roles ="admin")]
     [HttpPost("v1/blocks/")]
-    public async Task<IActionResult> Post([FromBody] BlockViewModel model,
-        [FromServices] DataContext context
+    public async Task<IActionResult> Post([FromBody] BlockViewModel model
       )
     {
         try
@@ -93,8 +98,8 @@ public class BlockController : Controller
                 QuantityeUnit = model.QuantityeUnit,
                 QuantityFloor = model.QuantityFloor,
             };
-            await context.Blocks.AddAsync(block);
-            await context.SaveChangesAsync();
+            await _context.Blocks.AddAsync(block);
+            await _context.SaveChangesAsync();
 
 
             return Ok(new ResultViewModel<dynamic>(new
@@ -117,14 +122,14 @@ public class BlockController : Controller
 
     [Authorize(Roles = "admin")]
     [HttpPut("v1/blocks/{id:int}")]
-    public async Task<IActionResult> Put([FromServices] DataContext context,
+    public async Task<IActionResult> Put(
         [FromBody] BlockViewModel model, [FromRoute] int id)
     {
         try {
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-            var block = await context.Blocks.FirstOrDefaultAsync(x => x.Id == id);
+            var block = await _context.Blocks.FirstOrDefaultAsync(x => x.Id == id);
             if (block == null)
                 return BadRequest(new ResultViewModel<Unit>(ModelState.GetErrors()));
 
@@ -132,8 +137,8 @@ public class BlockController : Controller
             block.QuantityFloor = model.QuantityFloor;
             block.QuantityeUnit = model.QuantityeUnit;
 
-            context.Blocks.Update(block);
-            await context.SaveChangesAsync();
+            _context.Blocks.Update(block);
+            await _context.SaveChangesAsync();
 
             return Ok(new ResultViewModel<dynamic>(new
             {
@@ -152,12 +157,5 @@ public class BlockController : Controller
             return StatusCode(500, new ResultViewModel<string>("05X04 - Falha interna no servidor"));
         }
     }
-
-
-
- 
-
-  
-
 }
 
