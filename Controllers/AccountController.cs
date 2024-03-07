@@ -1,14 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using API_CONDOMINIO_2.Data;
+using API_CONDOMINIO_2.Extensions;
+using API_CONDOMINIO_2.Models;
+using API_CONDOMINIO_2.Services;
+using API_CONDOMINIO_2.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SecureIdentity.Password;
-using System.Text.RegularExpressions;
-using API_CONDOMINIO_2.Services;
-using API_CONDOMINIO_2.ViewModel;
-using API_CONDOMINIO_2.Data;
-using API_CONDOMINIO_2.Models;
-using API_CONDOMINIO_2.Extensions;
 namespace API_CONDOMINIO_2.Controllers;
 
 [ApiController]

@@ -1,29 +1,35 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using API_CONDOMINIO_2.Data;
-using API_CONDOMINIO_2.Extensions;
+﻿using API_CONDOMINIO_2.Extensions;
 using API_CONDOMINIO_2.Models;
 using API_CONDOMINIO_2.ViewModel;
+using API_CONDOMINIO_V2.Repositories.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using System.ComponentModel.DataAnnotations;
 namespace API_CONDOMINIO_2.Controllers;
 [Authorize]
 [ApiController]
     public class ResidentsController : Controller
     {
+    
+    private readonly IMemoryCache _cache;
+    private readonly IResidentRepository _residentRepository;
+
+    public ResidentsController( IMemoryCache cache, IResidentRepository residentRepository)
+    {
+        _residentRepository = residentRepository;
+        _cache = cache;
+    }
+
     [HttpGet("v1/residents")]
-    public async Task<IActionResult> GetAsyncCache(
-  [FromServices] IMemoryCache cache,
-  [FromServices] DataContext context)
+    public async Task<IActionResult> GetAsyncCache()
     {
         try
         {
-            var residents = cache.GetOrCreate("residentCache", entry =>
+            var residents = await _cache.GetOrCreate("residentCache", async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-                return GetResidents(context);
+                return await _residentRepository.GetAllResidentsAsync();
             });
             return Ok(new ResultViewModel<List<Resident>>(residents));
         }
@@ -33,21 +39,14 @@ namespace API_CONDOMINIO_2.Controllers;
         }
     }
 
-    private List<Resident> GetResidents(DataContext context) => context.Residents.ToList();
-
     [Authorize(Roles = "admin")]
         [HttpGet("v2/residents/")]
-        public async Task<IActionResult> Get([FromServices] DataContext context)
+        public async Task<IActionResult> Get()
         {
 
             try
             {
-                var blocks = await context.Residents
-                .Include(x => x.Sex)
-                .Include( x => x.Unit)
-                .ThenInclude(x => x.Block)
-                .AsNoTracking()
-                . ToListAsync();
+                var blocks = await _residentRepository.GetAllResidentsWithDetailsAsync();
                 return Ok(blocks);
             }
             catch
@@ -59,16 +58,11 @@ namespace API_CONDOMINIO_2.Controllers;
     [Authorize(Roles = "admin")]
     [HttpGet("v1/residents/{id:int}")]
     public async Task<IActionResult> GetId(
-        [FromServices] DataContext context,
         [FromRoute] int id)
     {
         try
         {
-            var block = await context.Residents
-                .Include(x => x.Sex)
-                .Include(x => x.Unit)
-                .ThenInclude(x => x.Block)
-                .FirstOrDefaultAsync(y => y.Id == id);
+            var block = await _residentRepository.GetResidentByIdWithDetailsAsync(id);
             if (block == null)
                 NotFound("Conteúdo não encontrado");
             return Ok(block);
@@ -81,18 +75,18 @@ namespace API_CONDOMINIO_2.Controllers;
 
     [Authorize(Roles ="admin")]
     [HttpPost("v1/residents/")]
-    public async Task<IActionResult> Post([FromServices] DataContext context, [FromBody] ResidentViewModel model)
+    public async Task<IActionResult> Post([FromBody] ResidentViewModel model)
     {
         try
         {
             if(!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-               var unit = context.Units.FirstOrDefault(x =>x.Id == model.UnitId);
+            var unit =  await _residentRepository.GetUnitByIdAsync(model.UnitId);
             if ( unit is null)
                 return StatusCode(400, new ResultViewModel<string>("05X97 - Unit does not exist"));
 
-            var sex = context.Sex.FirstOrDefault(x => x.Id == model.SexId);
+            var sex = await _residentRepository.GetSexByIdAsync(model.SexId); 
             if (sex is null)
                 return StatusCode(400, new ResultViewModel<string>("05X97 - Sex does not exist"));
 
@@ -111,10 +105,8 @@ namespace API_CONDOMINIO_2.Controllers;
                 
                 
             };
-            await context.Residents.AddAsync(resident);
-            await context.SaveChangesAsync();
-
-
+            await _residentRepository.AddResidentAsync(resident);
+   
             return Ok(new ResultViewModel<dynamic>(new
             {
                 Nome = model.Name,
@@ -137,24 +129,23 @@ namespace API_CONDOMINIO_2.Controllers;
 
     [Authorize(Roles = "admin")]
     [HttpPut("v1/residents/{id:int}")]
-    public async Task<IActionResult> Put([FromServices] DataContext context,
-        [FromBody] ResidentViewModel model, [FromRoute] int id)
+    public async Task<IActionResult> Put([FromBody] ResidentViewModel model,
+        [FromRoute] int id)
     {
         try {
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
-            var unit = await context.Units.FirstOrDefaultAsync(x => x.Id == model.UnitId);
+           var unit = await _residentRepository.GetUnitByIdAsync(model.UnitId);
             if (unit is null)
                 return StatusCode(400, new ResultViewModel<string>("05X97 - Unit does not exist"));
 
-            var sex = await context.Sex.FirstOrDefaultAsync(x => x.Id == model.SexId);
+            var sex = await _residentRepository.GetSexByIdAsync(model.SexId);
             if (sex is null)
                 return StatusCode(400, new ResultViewModel<string>("05X97 - Sex does not exist"));
 
-            var resident = await context.Residents.FirstOrDefaultAsync(x => x.Id == id);
+            var resident = await _residentRepository.GetResidentByIdAsync(id);
             if (resident == null)
                 return BadRequest(new ResultViewModel<Unit>(ModelState.GetErrors()));
-
 
             resident.Name = model.Name;
             resident.Phone = model.Phone;
@@ -165,10 +156,7 @@ namespace API_CONDOMINIO_2.Controllers;
             resident.Responsible    = model.Responsible;
             resident.SexId = model.SexId;
 
-
-
-             context.Residents.Update(resident);
-            await context.SaveChangesAsync();
+          await  _residentRepository.UpdateResidentAsync(resident);
 
             return Ok(new ResultViewModel<dynamic>(new
             {
@@ -191,18 +179,16 @@ namespace API_CONDOMINIO_2.Controllers;
 
     [Authorize(Roles = "admin")]
     [HttpPost("v1/residents/{id:int}")]
-    public async Task<IActionResult> DeleteAsync([FromServices] DataContext context, [FromRoute] int id)
+    public async Task<IActionResult> DeleteAsync( [FromRoute] int id)
     {
         try
         {
-            var resident = await context.Residents.FirstOrDefaultAsync(x => x.Id ==id);
+            var resident = await _residentRepository.GetResidentByIdAsync(id);
             if (resident == null)
                 return BadRequest(new ResultViewModel<string>("Conteúdo não encontrado"));
 
-            resident.Excluded = true;
-            resident.ExclusionDate = DateTime.Now;
-             context.Residents.Update(resident);
-            await context.SaveChangesAsync();
+            await _residentRepository.DeleteResidentAsync(resident);
+  
 
             return Created($"v1/residents/{resident.Id}", resident);
         }

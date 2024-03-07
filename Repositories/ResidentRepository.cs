@@ -31,5 +31,45 @@ namespace API_CONDOMINIO_V2.Repositories
             _context.Residents.Update(Resident);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<Resident>> GetAllResidentsWithDetailsAsync()
+        {
+            return await _context.Residents
+                .Include(x => x.Sex)
+                .Include(x => x.Unit)
+                    .ThenInclude(x => x.Block)
+                .AsNoTracking()
+                .ToListAsync();
+        }
+        public async Task<Unit> GetUnitByIdAsync(int id)
+        {
+            return await _context.Units.FirstOrDefaultAsync(x => x.Id == id);
+        }
+
+        public async Task<Sex> GetSexByIdAsync(int id)
+        {
+            return await _context.Sex.FirstOrDefaultAsync(x => x.Id == id);
+        }
+
+        public async Task<Resident> GetResidentByIdWithDetailsAsync(int id)
+        {
+            return await _context.Residents
+                .Include(x => x.Sex)
+                .Include(x => x.Unit)
+                    .ThenInclude(x => x.Block)
+                .FirstOrDefaultAsync(y => y.Id == id);
+        }
+
+        public async Task DeleteResidentAsync(Resident resident)
+        {
+        
+            if (resident != null)
+            {
+                resident.Excluded = true;
+                resident.ExclusionDate = DateTime.Now;
+                _context.Residents.Update(resident);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

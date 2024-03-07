@@ -1,28 +1,27 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using API_CONDOMINIO_2.Data;
+﻿using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Extensions;
 using API_CONDOMINIO_2.Models;
 using API_CONDOMINIO_2.ViewModel;
+using API_CONDOMINIO_V2.Repositories.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using API_CONDOMINIO_V2.Repositories.Contracts;
 namespace API_CONDOMINIO_2.Controllers;
 
-    [ApiController]
+[ApiController]
 [Authorize]
 public class BlockController : Controller
     {
 
-    private readonly DataContext _context;
+
     private readonly IMemoryCache _cache;
     private readonly IBlockRepository _blockRepository;
 
 
     public BlockController(DataContext context, IMemoryCache cache, IBlockRepository blockRepository)
     {
-        _context = context;
+     
         _cache = cache;
         _blockRepository = blockRepository;
     }
@@ -31,10 +30,10 @@ public class BlockController : Controller
     {
         try
         {
-            var blocks = _cache.GetOrCreate("BlockCache", entry =>
+            var blocks = await _cache.GetOrCreateAsync("BlockCache", async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-                return GetBocks(_context);
+                return await _blockRepository.GetAllBlocksAsync();
             });
             return Ok(new ResultViewModel<List<Block>>(blocks));
         }
@@ -43,11 +42,7 @@ public class BlockController : Controller
             return StatusCode(500, new ResultViewModel<List<Block>>("05X04 - Falha interna no servidor"));
         }
     }
-    private List<Block> GetBocks(DataContext context) => context.Blocks.ToList();
-
-
-
-
+   
     [Authorize(Roles = "admin")]
         [HttpGet("v2/blocks/")]
         public async Task<IActionResult> GetAllBlocks()

@@ -1,5 +1,6 @@
 ﻿using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Models;
+using API_CONDOMINIO_2.ViewModel;
 using API_CONDOMINIO_V2.Repositories.Contracts;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,12 +21,23 @@ namespace API_CONDOMINIO_V2.Repositories
         => await _context.Units.FirstOrDefaultAsync(x => x.Id == id);
         
 
-        public async Task AddUnitAsync(Unit Unit)
+        public async Task<bool> AddUnitAsync(UnitViewModel model)
         {
-            await _context.Units.AddAsync(Unit);
+            var block = await _context.Blocks.FirstOrDefaultAsync(x=> x.Id == model.BlockId);
+            if (block == null)
+                throw new ArgumentException("Invalid unit");
+            var unit = new Unit
+            {
+                NumberUnit = model.NumberUnit,
+                Block = block,
+                PeopleLiving = model.PeopleLiving,
+                Observation = model.Observation,
+                HasGarage = model.HasGarage
+            };
+            await _context.Units.AddAsync(unit);
             await _context.SaveChangesAsync();
+            return true;
         }
-
         public async Task UpdateUnitAsync(Unit Unit)
         {
             _context.Units.Update(Unit);

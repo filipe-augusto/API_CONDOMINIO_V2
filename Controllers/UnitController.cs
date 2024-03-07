@@ -2,6 +2,7 @@
 using API_CONDOMINIO_2.Extensions;
 using API_CONDOMINIO_2.Models;
 using API_CONDOMINIO_2.ViewModel;
+using API_CONDOMINIO_V2.Repositories.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,19 +13,24 @@ using Microsoft.Extensions.Caching.Memory;
 public class UnitController : Controller
 {
 
+    private readonly IMemoryCache _cache;
+    private readonly IUnitRepository _unitRepository;
 
+    public UnitController(IMemoryCache cache, IUnitRepository unitRepository)
+    {
+        _unitRepository = unitRepository;
+        _cache = cache;
+    }
 
     [HttpGet("v1/units")]
-    public async Task<IActionResult> GetAsyncCache(
-      [FromServices] IMemoryCache cache,
-      [FromServices] DataContext context)
+    public async Task<IActionResult> GetAsyncCache()
     {
         try
         {
-            var units = cache.GetOrCreate("UnitCache", entry =>
+            var units = await _cache.GetOrCreate("UnitCache", async entry =>
             {
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-                return GetUnits(context);
+                return await _unitRepository.GetAllUnitsAsync();
             });
             return Ok(new ResultViewModel<List<Unit>>(units));
         }
@@ -33,16 +39,16 @@ public class UnitController : Controller
             return StatusCode(500, new ResultViewModel<List<Role>>("05X04 - Falha interna no servidor"));
         }
     }
-    private List<Unit> GetUnits(DataContext context) => context.Units.ToList();
+ 
 
     [Authorize(Roles = "admin")]
     [HttpGet("v2/units/")]
-    public async Task<IActionResult> Get([FromServices] DataContext context)
+    public async Task<IActionResult> Get()
     {
 
         try
         {
-            var units =await context.Units.ToListAsync();
+            var units = await _unitRepository.GetAllUnitsAsync();
             return Ok(units);
         }
         catch
@@ -53,17 +59,14 @@ public class UnitController : Controller
     
     [Authorize(Roles = "admin")]
     [HttpGet("v1/units/{id:int}")]
-    public async Task<IActionResult> GetById(
-        [FromServices] DataContext context,
-        [FromRoute] int id)
+    public async Task<IActionResult> GetById([FromRoute] int id)
     {
         try
         {
-            var unit = await context.Units.FirstOrDefaultAsync(x => x.Id == id);
+            var unit = await _unitRepository.GetUnitByIdAsync(id);
             if (unit == null)
                 NotFound("Conteúdo não encontrado");
             return Ok(unit);
-
         }
         catch
         {
@@ -73,36 +76,26 @@ public class UnitController : Controller
     
     [Authorize(Roles = "admin")]
     [HttpPost("v1/units/")]
-    public async Task<ActionResult> Post([FromServices] DataContext context,[FromBody] UnitViewModel model)
+    public async Task<ActionResult> Post([FromBody] UnitViewModel model)
     {
         try
         {
 
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
-            var block = context.Blocks.FirstOrDefault(x => x.Id == model.BlockId);
-            if (block is null)
-                return StatusCode(400, new ResultViewModel<string>("05X95 - Invalid unit"));
-            
-            var unit = new Unit
-            {
-                NumberUnit = model.NumberUnit,
-                Block = block,
-                PeopleLiving = model.PeopleLiving,
-                Observation = model.Observation,
-                HasGarage = model.HasGarage
-            };
 
-            await context.Units.AddAsync(unit);
-            await context.SaveChangesAsync();
+            var result = await _unitRepository.AddUnitAsync(model);
+            if (result)
+                return Ok(new ResultViewModel<dynamic>(new
+                {
+                    unidade = model.NumberUnit,
+                    unidade_ocupada = model.PeopleLiving,
+                    tem_garagem = model.HasGarage,
+                    observacao = model.Observation,
+                }));
+            else
+                return StatusCode(500, new ResultViewModel<string>("07x556 Failed to add unit"));
 
-            return Ok(new ResultViewModel<dynamic>(new
-            {
-                unidade = model.NumberUnit,
-                unidade_ocupada = model.PeopleLiving,
-                tem_garagem = model.HasGarage,
-                observacao = model.Observation,
-            }));
         }
         catch (DbUpdateException)
         {
@@ -118,7 +111,7 @@ public class UnitController : Controller
 
     [Authorize(Roles = "admin")]
     [HttpPut("v1/units/{id:int}")]
-    public async Task<IActionResult> Put([FromServices] DataContext context, 
+    public async Task<IActionResult> Put(
         [FromBody] UnitViewModel model, [FromRoute] int id)
     {
         try
@@ -126,7 +119,7 @@ public class UnitController : Controller
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-            var unit = await context.Units.FirstOrDefaultAsync(x => x.Id == id);
+            var unit = await _unitRepository.GetUnitByIdAsync(id);
             if (unit == null)
                 return BadRequest(new ResultViewModel<Unit>(ModelState.GetErrors()));
 
@@ -134,9 +127,7 @@ public class UnitController : Controller
             unit.HasGarage = model.HasGarage;
             unit.PeopleLiving = model.PeopleLiving;
             unit.NumberUnit = model.NumberUnit;
-
-            context.Units.Update(unit);
-            await context.SaveChangesAsync();
+            await _unitRepository.UpdateUnitAsync(unit);
 
             return Ok(new ResultViewModel<dynamic>(new
             {
@@ -145,7 +136,6 @@ public class UnitController : Controller
                 tem_garagem = model.HasGarage,
                 observacao = model.Observation,
             }));
-
         }
         catch (DbUpdateException)
         {
@@ -156,36 +146,6 @@ public class UnitController : Controller
             return StatusCode(500, new ResultViewModel<string>("05X04 - Falha interna no servidor"));
         }
     }
-
-
-    [Authorize(Roles ="admin")]
-    [HttpDelete("v1/units/{id:int}")]
-    public async Task<IActionResult> DeleteAsync([FromServices] DataContext context, [FromRoute] int id)
-    {
-        try
-        {
-            var unit = await context.Units.FirstOrDefaultAsync(x => x.Id == id);
-            if (unit == null)
-                return BadRequest(new ResultViewModel<string>("Conteúdo não encontrado"));
-
-            context.Units.Remove(unit);
-            await context.SaveChangesAsync();
-
-            return Created($"v1/units/{unit.Id}", unit);
-        }
-        catch (DbUpdateException)
-        {
-            return StatusCode(500, "05x13 - Não foi possivel deletar a categoria");
-        }
-        catch 
-        {
-            return StatusCode(500, "05x14 - falha interna no servidor");
-        }
-
-    }
-
-
-
 
 }
 
