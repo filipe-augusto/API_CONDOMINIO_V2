@@ -1,5 +1,6 @@
 ﻿using API_CONDOMINIO_2.Extensions;
 using API_CONDOMINIO_2.Models;
+using API_CONDOMINIO_V2.Services.Contracts;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,7 +8,7 @@ using System.Text;
 
 namespace API_CONDOMINIO_2.Services;
 
-    public class TokenService
+    public class TokenService : ITokenService
     {
         public string GenerateToken(User user)
         {

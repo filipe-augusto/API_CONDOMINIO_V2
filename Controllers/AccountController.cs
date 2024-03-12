@@ -3,41 +3,49 @@ using API_CONDOMINIO_2.Extensions;
 using API_CONDOMINIO_2.Models;
 using API_CONDOMINIO_2.Services;
 using API_CONDOMINIO_2.ViewModel;
+using API_CONDOMINIO_V2.Repositories;
+using API_CONDOMINIO_V2.Repositories.Contracts;
+using API_CONDOMINIO_V2.Services.Contracts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using SecureIdentity.Password;
 namespace API_CONDOMINIO_2.Controllers;
 
 [ApiController]
 public class AccountController : Controller
 {
+    private readonly IUserRepository _userRepository;
+    private readonly IAccountRepository _accountRepository;
+    private readonly ITokenService _tokenService;
 
 
+    public AccountController(IUserRepository userRepository, IAccountRepository accountRepository ,ITokenService tokenService)
+    {
+        _userRepository = userRepository;
+        _accountRepository = accountRepository;
+        _tokenService = tokenService;
+    }
     [HttpPost("v1/accounts/login")]
     public async Task<IActionResult> Login(
-  [FromBody] LoginViewModel model,
-  [FromServices] DataContext context,
-  [FromServices] TokenService tokenService)
+  [FromBody] LoginViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-        var user = await context
-            .Users
-            .AsNoTracking()
-            .Include(x => x.Roles)
-            .FirstOrDefaultAsync(x => x.Email == model.Email);
-
+        var user = await _accountRepository.GetUser(model.Email);
+  
         if (user == null)
             return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválidos"));
 
-        if (!PasswordHasher.Verify(user.PasswordHash, model.Password))
+ 
+        if (!_accountRepository.CheckPassWord(user.PasswordHash,model.Password))
             return StatusCode(401, new ResultViewModel<string>("Usuário ou senha inválidos"));
 
         try
         {
-            var token = tokenService.GenerateToken(user);
+            var token = _accountRepository.GetToken(user);
             return Ok(new ResultViewModel<string>(token, null));
         }
         catch
@@ -61,44 +69,21 @@ public class AccountController : Controller
     public IActionResult GetAdmin() => Ok(User.Identity.Name);
 
     [Authorize(Roles = "admin")]
-    //    "user": "admin@filipe.com",
-      //  "password": ")9uX%6A4B6{BYgyTRBDDzP7Dd"
-    //
     [HttpPost("v1/accounts/")]
     public async Task<IActionResult> Post(
-    [FromBody] RegisterViewModel model,
-    [FromServices] DataContext context)
+    [FromBody] RegisterViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
-
-        var user = new User
-        {
-            Name = model.Name,
-            Email = model.Email,
-        };
-
-        var password = PasswordGenerator.Generate(25);
-        user.PasswordHash = PasswordHasher.Hash(password);
-
         try
         {
+            var passWord = await _userRepository.AddUserAsync(model);
+                return Ok(new ResultViewModel<dynamic>(new
+                {
+                    user = model.Email,
+                    passWord = passWord
 
-
-            var role = await context.Role.FirstOrDefaultAsync(x => x.Id == model.IdRole);
-
-            user.Roles = new List<Role> { role };
-            await context.Users.AddAsync(user);
-
-            await context.SaveChangesAsync();
-
-            return Ok(new ResultViewModel<dynamic>(new
-            {
-                user = user.Email,
-                password
-            }));
-
-
+                }));
         }
         catch (DbUpdateException)
         {
@@ -113,32 +98,25 @@ public class AccountController : Controller
     [Authorize(Roles = "admin")]
     [HttpPut("v1/accounts/{IdUser:int}")]
     public async Task<IActionResult> Put([FromRoute] int IdUser,
-     [FromBody] RegisterViewModel model,
-     [FromServices] DataContext context)
+     [FromBody] RegisterViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
 
-
-
-        var user = await context.Users.FirstOrDefaultAsync(x => x.Id == IdUser);
+        var user = await _userRepository.GetUserByIdAsync(IdUser);
         if (user == null)
             return BadRequest(new ResultViewModel<User>(ModelState.GetErrors()));
-
 
         user.Name = model.Name;
         user.Email = model.Email;
         user.Image = model.Image??user.Image;
         try
         {
-            context.Users.Update(user);
-            await context.SaveChangesAsync();
+           await _userRepository.UpdateUserAsync(user);
             return Ok(new ResultViewModel<dynamic>(new
             {
                 user = user.Email,
             }));
-
-
         }
         catch (DbUpdateException)
         {
@@ -180,14 +158,12 @@ public class AccountController : Controller
 
     [Authorize]
     [HttpGet("v1/accounts/")]
-    public async Task<IActionResult> GetAsync([FromServices] DataContext context)
+    public async Task<IActionResult> GetAsync()
     {
         try
         {
-            var users = await context.Users.ToListAsync();
-
+            var users = await _userRepository.GetAllUsersAsync();
             return Ok(users);
-
         }
         catch 
         {
@@ -197,12 +173,11 @@ public class AccountController : Controller
 
     [Authorize(Roles = "admin")]
     [HttpGet("v1/accounts/{id:int}")]
-    public async Task<IActionResult> GetByIdAsync([FromRoute] int id,
-    [FromServices] DataContext context)
+    public async Task<IActionResult> GetByIdAsync([FromRoute] int id)
     {
         try
         {
-            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == id);
+            var user = await _userRepository.GetUserByIdAsync(id);
             if (user == null)
                 NotFound(("Couteúdo não encontrado."));
             return Ok(user);
@@ -215,10 +190,10 @@ public class AccountController : Controller
 
     [AllowAnonymous]
     [HttpPost("v1/login")]
-    public IActionResult Login([FromServices] TokenService tokenService)
+    public IActionResult Login()
     {
 
-        var token = tokenService.GenerateToken(null);
+        var token = _tokenService.GenerateToken(null);
 
         return Ok(token);
     }

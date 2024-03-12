@@ -18,6 +18,7 @@ namespace API_CONDOMINIO_V2.Extensions
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IResidentRepository, ResidentRepository>();
             services.AddScoped<IUnitRepository, UnitRepository>();
+            services.AddScoped<IAccountRepository, AccountRepository>();
         }
 
 

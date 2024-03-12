@@ -1,7 +1,9 @@
 ﻿using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Models;
+using API_CONDOMINIO_2.ViewModel;
 using API_CONDOMINIO_V2.Repositories.Contracts;
 using Microsoft.EntityFrameworkCore;
+using SecureIdentity.Password;
 
 namespace API_CONDOMINIO_V2.Repositories
 {
@@ -16,18 +18,34 @@ namespace API_CONDOMINIO_V2.Repositories
         => await _context.Users.ToListAsync();
         
         public async Task<User> GetUserByIdAsync(int id)
-        =>  await _context.Users.FirstOrDefaultAsync(x => x.Id == id);
+        => await _context.Users.FirstOrDefaultAsync(x => x.Id == id);
         
-        public async Task AddUserAsync(User User)
+        public async Task<string> AddUserAsync(RegisterViewModel model)
         {
-            await _context.Users.AddAsync(User);
+            var user = new User
+            {
+                Name = model.Name,
+                Email = model.Email,
+            };
+            var role = await _context.Role.FirstOrDefaultAsync(x => x.Id == model.IdRole);
+            user.Roles = new List<Role> { role };
+
+            var password = PasswordGenerator.Generate(25);
+            user.PasswordHash = PasswordHasher.Hash(password);
+
+
+            await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
+            return password;
         }
+
 
         public async Task UpdateUserAsync(User User)
         {
             _context.Users.Update(User);
             await _context.SaveChangesAsync();
         }
+
+   
     }
 }

@@ -1,4 +1,5 @@
 ﻿using API_CONDOMINIO_2.Models;
+using API_CONDOMINIO_2.ViewModel;
 
 namespace API_CONDOMINIO_V2.Repositories.Contracts;
 
@@ -6,7 +7,8 @@ namespace API_CONDOMINIO_V2.Repositories.Contracts;
     {
         Task<List<User>> GetAllUsersAsync();
         Task<User> GetUserByIdAsync(int id);
-        Task AddUserAsync(User User);
+        Task<string> AddUserAsync(RegisterViewModel User);
         Task UpdateUserAsync(User User);
-    }
+
+}
 
