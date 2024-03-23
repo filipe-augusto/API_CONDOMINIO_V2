@@ -46,6 +46,10 @@ namespace API_CONDOMINIO_V2.Repositories
             await _context.SaveChangesAsync();
         }
 
-   
+        public async Task DeleteUserAsync(User User)
+        {
+            _context.Users.Remove(User);
+            await _context.SaveChangesAsync();  
+        }
     }
 }

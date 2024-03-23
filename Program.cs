@@ -1,8 +1,7 @@
 using API_CONDOMINIO_2;
 using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Services;
-using API_CONDOMINIO_V2.Repositories.Contracts;
-using API_CONDOMINIO_V2.Repositories;
+using API_CONDOMINIO_V2.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -11,16 +10,12 @@ using Microsoft.OpenApi.Models;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Serialization;
-using API_CONDOMINIO_V2.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 ConfigureAuthentication(builder);
 ConfigureMvc(builder);
 ConfigureService(builder);
-
-
-
 
 var app = builder.Build();
 LoadConfiguration(app);

@@ -9,6 +9,7 @@ namespace API_CONDOMINIO_V2.Repositories.Contracts;
         Task<User> GetUserByIdAsync(int id);
         Task<string> AddUserAsync(RegisterViewModel User);
         Task UpdateUserAsync(User User);
+        Task DeleteUserAsync(User User);
 
 }
 

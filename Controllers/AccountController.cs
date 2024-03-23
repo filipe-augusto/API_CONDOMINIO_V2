@@ -29,7 +29,7 @@ public class AccountController : Controller
     }
     [HttpPost("v1/accounts/login")]
     public async Task<IActionResult> Login(
-  [FromBody] LoginViewModel model)
+  [FromBody] LoginViewModel model, [FromServices] TokenService tokenService)
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
@@ -45,7 +45,7 @@ public class AccountController : Controller
 
         try
         {
-            var token = _accountRepository.GetToken(user);
+            var token = tokenService.GenerateToken(user);
             return Ok(new ResultViewModel<string>(token, null));
         }
         catch
@@ -55,7 +55,6 @@ public class AccountController : Controller
     }
 
    
-
     [Authorize(Roles = "user")]
     [HttpGet("v1/user")]
     public IActionResult GetUser() => Ok(User.Identity.Name);
@@ -130,18 +129,16 @@ public class AccountController : Controller
 
     [Authorize(Roles = "admin")]
     [HttpDelete("v1/accounts/{id:int}")]
-    public async Task<IActionResult> DeleteAsync([FromRoute] int id,
-    [FromServices] DataContext context)
+    public async Task<IActionResult> DeleteAsync([FromRoute] int id)
     {
 
         try
         {
-            var user = await context.Users.FirstOrDefaultAsync(x => x.Id == id);
+            var user = await _userRepository.GetUserByIdAsync(id);
             if (user == null)
                 return BadRequest(new ResultViewModel<User>("Conteúdo não encontrado."));
 
-            context.Users.Remove(user);
-            await context.SaveChangesAsync();
+            await _userRepository.DeleteUserAsync(user);
 
             return Created($"v1/accounts/{user.Id}", user);
         }

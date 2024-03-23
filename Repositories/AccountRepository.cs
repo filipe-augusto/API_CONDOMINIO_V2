@@ -12,20 +12,15 @@ namespace API_CONDOMINIO_V2.Repositories
     public class AccountRepository : IAccountRepository
     {
         private readonly DataContext _context;
-        private readonly ITokenService _tokenService;
+     
 
-        public AccountRepository(DataContext context , ITokenService tokenService )
+        public AccountRepository(DataContext context  )
         {
             _context = context;
-            _tokenService = tokenService;
         }
 
         public bool CheckPassWord(string password, string passwordModel)
         =>  PasswordHasher.Verify(password, passwordModel);
-
-        public string GetToken(User user)
-        =>  _tokenService.GenerateToken(user);
-        
 
         public async Task<User> GetUser(string email) 
             => await  _context
@@ -35,9 +30,6 @@ namespace API_CONDOMINIO_V2.Repositories
         .FirstOrDefaultAsync(x => x.Email == email);
 
 
-        public Task Login(LoginViewModel User)
-        {
-            throw new NotImplementedException();
-        }
+      
     }
 }
