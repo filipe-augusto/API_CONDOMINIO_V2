@@ -11,6 +11,8 @@ namespace API_CONDOMINIO_2.ViewModel
         [EmailAddress(ErrorMessage = "O e-mail é inválido")]
         public string Email { get; set; }
 
+        public string password { get; set; }
+
         public int IdRole { get; set; }
 
         public string? Image { get; set; }
