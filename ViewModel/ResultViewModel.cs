@@ -6,7 +6,7 @@ namespace API_CONDOMINIO_2.ViewModel
     {
         public ResultViewModel(T data, List<string> errors)
         {
-            Data = data;
+            Token = data;
             Errors = errors;
         }
 
@@ -26,6 +26,8 @@ namespace API_CONDOMINIO_2.ViewModel
         }
 
         public T Data { get; private set; }
+
+        public T Token { get; private set; }
         public List<string> Errors { get; private set; } = new();
     }
 }
