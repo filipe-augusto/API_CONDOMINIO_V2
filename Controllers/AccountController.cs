@@ -28,8 +28,7 @@ public class AccountController : Controller
         _tokenService = tokenService;
     }
     [HttpPost("v1/accounts/login")]
-    public async Task<IActionResult> Login(
-  [FromBody] LoginViewModel model, [FromServices] TokenService tokenService)
+    public async Task<IActionResult> Login([FromBody] LoginViewModel model)
     {
         if (!ModelState.IsValid)
             return BadRequest(new ResultViewModel<string>(ModelState.GetErrors()));
@@ -45,7 +44,7 @@ public class AccountController : Controller
 
         try
         {
-            var token = tokenService.GenerateToken(user);
+            var token = _tokenService.GenerateToken(user);
             return Ok(new ResultViewModel<string>(token, null));
         }
         catch
@@ -67,7 +66,7 @@ public class AccountController : Controller
     [HttpGet("v1/admin")]
     public IActionResult GetAdmin() => Ok(User.Identity.Name);
 
-    [Authorize(Roles = "admin")]
+    //[Authorize(Roles = "admin")]
     [HttpPost("v1/accounts/")]
     public async Task<IActionResult> Post(
     [FromBody] RegisterViewModel model)
@@ -185,15 +184,16 @@ public class AccountController : Controller
         }
     }
 
-    [AllowAnonymous]
-    [HttpPost("v1/login")]
-    public IActionResult Login()
-    {
 
-        var token = _tokenService.GenerateToken(null);
+    //[AllowAnonymous]
+    //[HttpPost("v1/login")] // DESATIVADO 
+    //public IActionResult Login()
+    //{
 
-        return Ok(token);
-    }
+    //    var token = _tokenService.GenerateToken(null);
+
+    //    return Ok(token);
+    //}
 
 }
 
