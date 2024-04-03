@@ -2,6 +2,7 @@ using API_CONDOMINIO_2;
 using API_CONDOMINIO_2.Data;
 using API_CONDOMINIO_2.Services;
 using API_CONDOMINIO_V2.Extensions;
+using API_CONDOMINIO_V2.Services.Contracts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
@@ -96,7 +97,7 @@ void ConfigureService(WebApplicationBuilder builder)
     {
         options.UseSqlServer(connectionString);
     });//AddDbContext para dbcontext
-    builder.Services.AddTransient<TokenService>();
+    builder.Services.AddTransient<ITokenService, TokenService >();
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
