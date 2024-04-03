@@ -2,8 +2,10 @@
 using API_CONDOMINIO_2.Models;
 using API_CONDOMINIO_2.ViewModel;
 using API_CONDOMINIO_V2.Repositories.Contracts;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SecureIdentity.Password;
+using System.Security.Cryptography;
 
 namespace API_CONDOMINIO_V2.Repositories
 {
@@ -30,13 +32,11 @@ namespace API_CONDOMINIO_V2.Repositories
             var role = await _context.Role.FirstOrDefaultAsync(x => x.Id == model.IdRole);
             user.Roles = new List<Role> { role };
 
-            var password = PasswordGenerator.Generate(25);
-            user.PasswordHash = PasswordHasher.Hash(password);
-
+            user.PasswordHash = PasswordHasher.Hash(model.password);
 
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
-            return password;
+            return model.password;
         }
 
 
