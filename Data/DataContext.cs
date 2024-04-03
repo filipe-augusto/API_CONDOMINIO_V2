@@ -19,10 +19,33 @@ public class DataContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Role>().HasData(
+            new Role
+            {
+                Id = 1,
+                Name = "admin",
+                Slug = "admin"
+            },
+            new Role
+            {
+                Id = 2,
+                Name = "operacional",
+                Slug = "operacional"
+            },
+            new Role
+            {
+                Id = 3,
+                Name = "usuario",
+                Slug = "usuario"
+            }
+            );
+
         modelBuilder.ApplyConfiguration(new ResidentMap());
         modelBuilder.ApplyConfiguration(new UserMap());
         modelBuilder.ApplyConfiguration(new UnitMap());
         modelBuilder.ApplyConfiguration(new BlockMap());
+
+
     }
 }
 
