@@ -6,6 +6,7 @@ using API_CONDOMINIO_V2.Services.Contracts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IO.Compression;
@@ -95,11 +96,13 @@ void ConfigureService(WebApplicationBuilder builder)
     //builder.Services.AddSqlConnection(connectionString);
     builder.Services.AddDbContext<DataContext>(options =>
     {
-        options.UseSqlServer(connectionString);
-    });//AddDbContext para dbcontext
+        //options.UseSqlServer(connectionString);
+        options.UseNpgsql(connectionString);
+    });
     builder.Services.AddTransient<ITokenService, TokenService >();
-
     builder.Services.AddEndpointsApiExplorer();
+    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
     builder.Services.AddSwaggerGen(c =>
     {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "Condominio API", Version = "v1" });
@@ -133,3 +136,4 @@ void ConfigureService(WebApplicationBuilder builder)
     builder.Services.AddRepositories();
 }
 
+public partial class Program { }

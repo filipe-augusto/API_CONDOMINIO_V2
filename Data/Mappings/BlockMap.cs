@@ -19,7 +19,7 @@ namespace API_CONDOMINIO_2.Data.Mappings
             builder.Property(x => x.NameBlock)
                 .IsRequired()
                 .HasColumnName("Name")
-                .HasColumnType("NVARCHAR")
+                .HasColumnType("VARCHAR")
                 .HasMaxLength(80);
 
             builder.Property(x => x.QuantityeUnit)
